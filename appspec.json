@@ -5,13 +5,12 @@
   "Resources": {
 
 
-
     "LambdaTest": {
       "Type": "AWS::Lambda::Function",
       "Properties": {
         "Description": "A lambda one function B",
         "FunctionName": "LambdaTest",
-        "Handler": "LambdaTest::LambdaTest.Function::FunctionHandler",
+        "Handler": "LambdaOne::LambdaOne.Function::FunctionHandler",
         "Role": { "Fn::GetAtt": [ "LambdaExecutionRole", "Arn" ] },
         "Runtime": "dotnetcore2.0"
       }
