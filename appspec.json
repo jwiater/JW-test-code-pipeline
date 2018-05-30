@@ -1,252 +1,55 @@
 {
-  "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "AWS CloudFormation sample template that contains a single Lambda function behind an API Gateway based on Swagger",
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Transform" : "AWS::Serverless-2016-10-31",
+  "Description" : "An AWS Serverless Application that uses the ASP.NET Core framework running in Amazon Lambda.",
 
-  "Resources": {
+  "Parameters" : {
+  },
 
-    "ArtifactsBucket": {
-      "Type": "AWS::S3::Bucket",
-      "DependsOn": "CloudFormationRole",
-      "DeletionPolicy": "Delete",
+  "Conditions" : {
+  },
+
+  "Resources" : {
+
+    "AspNetCoreFunction" : {
+      "Type" : "AWS::Serverless::Function",
       "Properties": {
-        "BucketName": "JW-test-lambda-deploy"
-      }
-    },
-
-    "CloudFormationRole": {
-      "Type": "AWS::IAM::Role",
-      "Properties": {
-        "AssumeRolePolicyDocument": {
-          "Version": "2012-10-17",
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Action": [
-                "sts:AssumeRole"
-              ],
-              "Principal": {
-                "Service": [
-                  "cloudformation.amazonaws.com"
-                ]
-              }
-            }
-          ]
-        },
-        "ManagedPolicyArns": [
-          "arn:aws:iam::aws:policy/AdministratorAccess"
-        ]
-      }
-    },
-
-    "LambdaOne": {
-      "Type": "AWS::Lambda::Function",
-      "Properties": {
-        "Code": {
-          "S3Bucket": { "Ref": "ArtifactsBucket" },
-          "S3Key": { "Ref": "LambdaKey" }
-        },
-        "Description": "A lambda one function B",
-        "FunctionName": "LambdaOne",
         "Handler": "LambdaOne::LambdaOne.Function::FunctionHandler",
-        "Role": { "Fn::GetAtt": [ "LambdaExecutionRole", "Arn" ] },
-        "Runtime": "dotnetcore2.0"
-      }
-    },
-
-    "LambdaExecutionRole": {
-      "Type": "AWS::IAM::Role",
-      "Properties": {
-        "AssumeRolePolicyDocument": {
-          "Version": "2012-10-17",
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Principal": { "Service": [ "lambda.amazonaws.com" ] },
-              "Action": [ "sts:AssumeRole" ]
-            }
-          ]
+        "Runtime": "dotnetcore2.0",
+        "CodeUri": "",
+        "MemorySize": 512,
+        "Timeout": 30,
+        "Role": null,
+        "Policies": [ "AWSLambdaFullAccess" ],
+        "Environment" : {
+          "Variables" : {
+          }
         },
-        "ManagedPolicyArns": [ "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole" ]
-      }
-    },
-
-    "LambdaOneApi": {
-      "Type": "AWS::ApiGateway::RestApi",
-      "Properties": {
-        "Name": "LambdaOne API",
-        "Description": "API used for LambdaOne requests",
-        "FailOnWarnings": true,
-        "Body": {
-          "swagger": "2.0",
-          "info": {
-            "version": "2018-05-28T09:48:14Z",
-            "title": "JW-test-API"
-          },
-          "basePath": "/LATEST",
-          "schemes": [
-            "https"
-          ],
-          "paths": {
-            "/JW-test-lambdaOne-ToUpper": {
-              "post": {
-                "produces": [
-                  "application/json"
-                ],
-                "responses": {
-                  "200": {
-                    "description": "200 response",
-                    "schema": {
-                      "$ref": "#/definitions/Empty"
-                    }
-                  }
-                },
-                "x-amazon-apigateway-integration": {
-                  "uri": {
-                    "Fn::Join": [
-                      "",
-                      [
-                        "arn:aws:apigateway:",
-                        { "Ref": "AWS::Region" },
-                        ":lambda:path/2015-03-31/functions/",
-                        { "Fn::GetAtt": [ "LambdaOne", "Arn" ] },
-                        "/invocations"
-                      ]
-                    ]
-                  },
-                  "responses": {
-                    "default": {
-                      "statusCode": "200"
-                    }
-                  },
-                  "passthroughBehavior": "when_no_match",
-                  "httpMethod": "POST",
-                  "contentHandling": "CONVERT_TO_TEXT",
-                  "type": "aws"
-                }
-              }
+        "Events": {
+          "ProxyResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/{proxy+}",
+              "Method": "ANY"
             }
           },
-          "definitions": {
-            "Empty": {
-              "type": "object",
-              "title": "Empty Schema"
+		      "RootResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/",
+              "Method": "ANY"
             }
           }
         }
       }
-    },
-
-    "LambdaPermission": {
-      "Type": "AWS::Lambda::Permission",
-      "Properties": {
-        "Action": "lambda:invokeFunction",
-        "FunctionName": { "Fn::GetAtt": [ "LambdaOne", "Arn" ] },
-        "Principal": "apigateway.amazonaws.com",
-        "SourceArn": {
-          "Fn::Join": [
-            "",
-            [
-              "arn:aws:execute-api:",
-              { "Ref": "AWS::Region" },
-              ":",
-              { "Ref": "AWS::AccountId" },
-              ":",
-              { "Ref": "LambdaOneApi" },
-              "/*"
-            ]
-          ]
-        }
-      }
-    },
-
-    "ApiGatewayCloudWatchLogsRole": {
-      "Type": "AWS::IAM::Role",
-      "Properties": {
-        "AssumeRolePolicyDocument": {
-          "Version": "2012-10-17",
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Principal": { "Service": [ "apigateway.amazonaws.com" ] },
-              "Action": [ "sts:AssumeRole" ]
-            }
-          ]
-        },
-        "Policies": [
-          {
-            "PolicyName": "ApiGatewayLogsPolicy",
-            "PolicyDocument": {
-              "Version": "2012-10-17",
-              "Statement": [
-                {
-                  "Effect": "Allow",
-                  "Action": [
-                    "logs:CreateLogGroup",
-                    "logs:CreateLogStream",
-                    "logs:DescribeLogGroups",
-                    "logs:DescribeLogStreams",
-                    "logs:PutLogEvents",
-                    "logs:GetLogEvents",
-                    "logs:FilterLogEvents"
-                  ],
-                  "Resource": "*"
-                }
-              ]
-            }
-          }
-        ]
-      }
-    },
-
-    "ApiGatewayAccount": {
-      "Type": "AWS::ApiGateway::Account",
-      "Properties": {
-        "CloudWatchRoleArn": { "Fn::GetAtt": [ "ApiGatewayCloudWatchLogsRole", "Arn" ] }
-      }
-    },
-
-    "LambdaOneApiStage": {
-      "DependsOn": [ "ApiGatewayAccount" ],
-      "Type": "AWS::ApiGateway::Stage",
-      "Properties": {
-        "DeploymentId": { "Ref": "ApiDeployment" },
-        "MethodSettings": [
-          {
-            "DataTraceEnabled": true,
-            "HttpMethod": "*",
-            "LoggingLevel": "INFO",
-            "ResourcePath": "/*"
-          }
-        ],
-        "RestApiId": { "Ref": "LambdaOneApi" },
-        "StageName": "LATEST"
-      }
-    },
-
-    "ApiDeployment": {
-      "Type": "AWS::ApiGateway::Deployment",
-      "Properties": {
-        "RestApiId": { "Ref": "LambdaOneApi" },
-        "StageName": "DummyStage"
-      }
+   
     }
   },
 
-  "Outputs": {
-    "RootUrl": {
-      "Description": "Root URL of the API gateway",
-      "Value": {
-        "Fn::Join": [
-          "",
-          [
-            "https://",
-            { "Ref": "LambdaOneApi" },
-            ".execute-api.",
-            { "Ref": "AWS::Region" },
-            ".amazonaws.com"
-          ]
-        ]
-      }
+  "Outputs" : {
+    "ApiURL" : {
+        "Description" : "API endpoint URL for Prod environment",
+        "Value" : { "Fn::Sub" : "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/" }
     }
   }
 }
